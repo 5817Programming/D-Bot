@@ -69,12 +69,11 @@ public class Limelight extends Subsystem {
 	public void readPeriodicInputs() {
 		double timestamp = Timer.getFPGATimestamp();
 		if (RobotBase.isReal()) {
-			inputs.heartbeat = LimelightHelpers.getLimelightNTDouble(name, "hb");
+			inputs.heartbeat = LimelightHelpers.getLimelightNTDouble(name, "hb").get();
 			inputs.jsonDump = LimelightHelpers.getJSONDump(name);
 		}
 
-		inputs.results = LimelightHelpers.getLatestResults(name, inputs.jsonDump);
-
+		inputs.results = LimelightHelpers.getLatestResults(name);
 		if (inputs.heartbeat != previousHeartbeat) {
 			isConnected = true;
 			previousHeartbeat = inputs.heartbeat;

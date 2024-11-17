@@ -7,7 +7,10 @@ import com.team254.lib.util.MovingAverage;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import java.util.List;
 
+import org.opencv.core.Core;
+
 public class VisionDeviceManager extends Subsystem {
+
 	private static VisionDeviceManager mInstance;
 
 	public static VisionDeviceManager getInstance() {
@@ -17,8 +20,8 @@ public class VisionDeviceManager extends Subsystem {
 		return mInstance;
 	}
 
-	private VisionDevice mLeftCamera;
-	private VisionDevice mRightCamera;
+	private VisionDevice mDomCamera;
+	private VisionDevice mSubCamera;
 
 	private List<VisionDevice> mAllCameras;
 
@@ -30,9 +33,9 @@ public class VisionDeviceManager extends Subsystem {
 	private static boolean disable_vision = false;
 
 	private VisionDeviceManager() {
-		mLeftCamera = new VisionDevice();
-		mRightCamera = new VisionDevice();
-		mAllCameras = List.of(mLeftCamera, mRightCamera);
+		mDomCamera = new VisionDevice("limelight-dom");
+		mSubCamera = new VisionDevice("limelight-sub");
+		mAllCameras = List.of(mDomCamera, mSubCamera);
 	}
 
 	@Override
@@ -62,15 +65,15 @@ public class VisionDeviceManager extends Subsystem {
 	}
 
 	public synchronized boolean fullyConnected() {
-		return mLeftCamera.isConnected() && mRightCamera.isConnected();
+		return mDomCamera.isConnected() && mSubCamera.isConnected();
 	}
 
 	public synchronized VisionDevice getLeftVision() {
-		return mLeftCamera;
+		return mDomCamera;
 	}
 
 	public synchronized VisionDevice getRightVision() {
-		return mRightCamera;
+		return mSubCamera;
 	}
 
 	public static double getTimestampOffset() {
