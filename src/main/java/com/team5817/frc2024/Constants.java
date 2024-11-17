@@ -5,13 +5,14 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.signals.AbsoluteSensorRangeValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.SensorDirectionValue;
-import com.team5817.frc2024.subsystems.Drive.KinematicLimits;
 import com.team5817.frc2024.subsystems.limelight.GoalTracker;
 import com.team5817.frc2024.subsystems.vision.VisionDeviceConstants;
-import com.team5817.lib.swerve.SwerveDriveKinematics;
 import com.team5817.lib.swerve.SwerveModule.SwerveModuleConstants;
 import com.team254.lib.geometry.Rotation2d;
 import com.team254.lib.geometry.Translation2d;
+import com.team254.lib.swerve.SwerveDriveKinematics;
+import com.team254.lib.swerve.SwerveKinematicLimits;
+
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -38,6 +39,8 @@ public class Constants {
 	public static final int kCANTimeoutMs = 10;
 
 	public static final class SwerveConstants {
+
+
 		public static final boolean invertGyro = false; // Always ensure Gyro is CCW+ CW-
 
 		/* Drivetrain Constants */
@@ -102,14 +105,23 @@ public class Constants {
 		public static final double kSnapSwerveHeadingKd = 0.6;
 		public static final double kSnapSwerveHeadingKf = 1.0;
 
-		public static final KinematicLimits kUncappedLimits = new KinematicLimits();
+		public static final SwerveKinematicLimits kSwerveKinematicLimits = new SwerveKinematicLimits();
 
 		static {
-			kUncappedLimits.kMaxDriveVelocity = maxSpeed;
-			kUncappedLimits.kMaxAccel = Double.MAX_VALUE;
-			kUncappedLimits.kMaxAngularVelocity = maxAngularVelocity;
-			kUncappedLimits.kMaxAngularAccel = Double.MAX_VALUE;
+			kSwerveKinematicLimits.kMaxDriveVelocity = maxSpeed;
+			kSwerveKinematicLimits.kMaxDriveAcceleration = Double.MAX_VALUE;
+			kSwerveKinematicLimits.kMaxSteeringVelocity = maxAngularVelocity;
 		}
+
+		public static final SwerveKinematicLimits kSwerveUncappedKinematicLimits = new SwerveKinematicLimits();
+
+		static {
+			kSwerveKinematicLimits.kMaxDriveVelocity = maxSpeed;
+			kSwerveKinematicLimits.kMaxDriveAcceleration = Double.MAX_VALUE;
+			kSwerveKinematicLimits.kMaxSteeringVelocity = Double.MAX_VALUE;
+		}
+	
+	
 
 		/*** MODULE SPECIFIC CONSTANTS ***/
 		/* Front Left Module - Module 0 */
