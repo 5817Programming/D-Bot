@@ -61,6 +61,7 @@ public class VisionDevice extends Subsystem {
 				final double realTime = timestamp - mPeriodicIO.latency;
 
 				if (mPeriodicIO.seesTarget && mPeriodicIO.is_connected) {
+					
 					mPeriodicIO.mt1Pose = new Pose2d(LimelightHelpers.getBotPose2d_wpiBlue(mName));
 
 					addHeadingObservation(mPeriodicIO.mt1Pose.getRotation());
