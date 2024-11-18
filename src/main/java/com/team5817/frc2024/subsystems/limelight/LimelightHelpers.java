@@ -905,12 +905,7 @@ public class LimelightHelpers {
     }
 
 
-package com.team5817.frc2024.subsystems.limelight;
 
-**
-     * Sets the crop window. The crop window in the UI must be completely open for
-     * dynamic cropping to work.
-     */
     public static void setCropWindow(String limelightName, double cropXMin, double cropXMax, double cropYMin, double cropYMax) {
         double[] entries = new double[4];
         entries[0] = cropXMin;

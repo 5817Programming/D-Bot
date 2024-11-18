@@ -1,15 +1,11 @@
 TODO:
 
-- Vision Device
-    Epipolar Filtering
-    HB Connection
-
 Simulation
 Note Tracking
 Add Back our Path Following (They use 254s outdated trajectories)
 Telemetry
 
-
+Latency Comp
 
 Add I/Os 
 

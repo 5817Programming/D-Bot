@@ -16,6 +16,8 @@ import com.team254.lib.swerve.SwerveKinematicLimits;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.util.Units;
@@ -245,19 +247,18 @@ public class Constants {
 				VecBuilder.fill(Math.pow(0.01, 1), Math.pow(0.01, 1));
 
 
-	public static VisionDeviceConstants kLeftVisionDevice = new VisionDeviceConstants(); // dot 13
-	public static VisionDeviceConstants kRightVisionDevice = new VisionDeviceConstants(); // dot 12
+	public static VisionDeviceConstants kDomVisionDevice = new VisionDeviceConstants(); // dot 13
+	public static VisionDeviceConstants kSubVisionDevice = new VisionDeviceConstants(); // dot 12
 
 	static {
-		kLeftVisionDevice.kTableName = "PolarisLeft";
-		kLeftVisionDevice.kRobotToCamera = new com.team254.lib.geometry.Transform2d(
-				new Translation2d(Units.inchesToMeters(3.071), Units.inchesToMeters(7.325)),
-				Rotation2d.fromDegrees(-27));
+		kDomVisionDevice.kTableName = "limelight-Dom";
+		kDomVisionDevice.kRobotToCamera = new Transform3d(Units.inchesToMeters(3.071), Units.inchesToMeters(7.325),Units.inchesToMeters(0), 
+				new Rotation3d(0,0,0));
 
-		kRightVisionDevice.kTableName = "PolarisRight";
-		kRightVisionDevice.kRobotToCamera = new com.team254.lib.geometry.Transform2d(
-				new Translation2d(Units.inchesToMeters(3.071), Units.inchesToMeters(-7.325)),
-				Rotation2d.fromDegrees(27.0));
+		kSubVisionDevice.kTableName = "limelight-Sub";
+		kSubVisionDevice.kRobotToCamera = new Transform3d(Units.inchesToMeters(3.071), Units.inchesToMeters(-7.325), Units.inchesToMeters(0),
+				new Rotation3d(0,0,0));//TODO set these to correct values
+
 	}
 
 }
