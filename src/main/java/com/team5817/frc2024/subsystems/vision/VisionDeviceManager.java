@@ -118,7 +118,8 @@ public class VisionDeviceManager extends Subsystem {
 		if(error.getTranslation().getNorm()>0.1||error.getRotation().getAngle()>0.5)//TODO Find threshold (meters and radians)
 			return List.of(getBestDevice());
 		return List.of(domDevice,subDevice);
-		}
+
+	}
 	public Double getMovingAverageRead() {
 		return mMovingAvgRead;
 	}

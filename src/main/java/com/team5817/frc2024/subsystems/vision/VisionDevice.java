@@ -59,8 +59,11 @@ public class VisionDevice extends Subsystem {
 					mPeriodicIO.targetToCamera = LimelightHelpers.getTargetPose3d_CameraSpace(mName);
 					mPeriodicIO.tagCounts = poseEstimate.tagCount;
 					mPeriodicIO.mt2Pose = new Pose2d(poseEstimate.pose);
-					VisionUpdate visionUpdate = new VisionUpdate(timestamp,mPeriodicIO.ta, mPeriodicIO.targetToCamera, mPeriodicIO.mt2Pose.getTranslation(), realTime);
+					VisionUpdate visionUpdate = new VisionUpdate(realTime, mPeriodicIO.ta, mPeriodicIO.targetToCamera, mPeriodicIO.mt2Pose.getTranslation(), );//HOW DO YOU FIND STD DEV
 					mPeriodicIO.visionUpdate = Optional.of(visionUpdate);
+				}
+				else{
+					mPeriodicIO.visionUpdate = Optional.empty();
 				}
 			}
 
