@@ -8,7 +8,6 @@ import com.ctre.phoenix.led.CANdleControlFrame;
 import com.ctre.phoenix.led.CANdleStatusFrame;
 import com.team5817.frc2024.Constants;
 import com.team5817.frc2024.Ports;
-import com.team5817.frc2024.Robot;
 import com.team5817.frc2024.led.Color;
 import com.team5817.frc2024.led.TimedLEDState;
 import com.team5817.frc2024.loops.ILooper;

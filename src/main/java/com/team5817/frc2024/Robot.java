@@ -4,97 +4,131 @@
 
 package com.team5817.frc2024;
 
+import java.util.HashMap;
+
 import org.littletonrobotics.junction.LoggedRobot;
 
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
+import org.littletonrobotics.junction.networktables.NT4Publisher;
 
-/**
- * The VM is configured to automatically run this class, and to call the functions corresponding to
- * each mode, as described in the TimedRobot documentation. If you change the name of this class or
- * the package after creating this project, you must also update the build.gradle file in the
- * project.
- */
+import com.team5817.frc2024.loops.Looper;
+import com.team5817.frc2024.subsystems.Drive;
+import com.team5817.frc2024.subsystems.Superstructure;
+
+import edu.wpi.first.wpilibj.DataLogManager;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
+
 public class Robot extends LoggedRobot {
-  private Command m_autonomousCommand;
 
-  /**
-   * This function is run when the robot is first started up and should be used for any
-   * initialization code.
-   */
-  @Override
-  public void robotInit() {
-    // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
-    // autonomous chooser on the dashboard.
-  }
-
-  /**
-   * This function is called every 20 ms, no matter the mode. Use this for items like diagnostics
-   * that you want ran during disabled, autonomous, teleoperated and test.
-   *
-   * <p>This runs after the mode specific periodic functions, but before LiveWindow and
-   * SmartDashboard integrated updating.
-   */
-  @Override
-  public void robotPeriodic() {
-    // Runs the Scheduler.  This is responsible for polling buttons, adding newly-scheduled
-    // commands, running already-scheduled commands, removing finished or interrupted commands,
-    // and running subsystem periodic() methods.  This must be called from the robot's periodic
-    // block in order for anything in the Command-based framework to work.
-    CommandScheduler.getInstance().run();
-  }
-
-  /** This function is called once each time the robot enters Disabled mode. */
-  @Override
-  public void disabledInit() {}
-
-  @Override
-  public void disabledPeriodic() {}
-
-  /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
-  @Override
-  public void autonomousInit() {
-
-    // schedule the autonomous command (example)
-    if (m_autonomousCommand != null) {
-      m_autonomousCommand.schedule();
+    SubsystemManager mSubsystemManager;
+    Superstructure s = Superstructure.getInstance();
+    Drive drive = Drive.getInstance();
+    // public LoggedDashboardChooser<AutoBase> autoChooser = new LoggedDashboardChooser<>("AutoChooser");
+    private final Looper mEnabledLooper = new Looper();
+  
+  // HashMap<String,AutoBase> autos = new HashMap<String,AutoBase>();
+    @Override
+    public void robotInit() {
+      DriverStation.silenceJoystickConnectionWarning(true);
+      // autos.put("Middle 4", new M6());
+  
+  
+      DriverStation.startDataLog(DataLogManager.getLog());
+  
+      RobotState.getInstance().resetKalman();
+      // for(HashMap.Entry<String, AutoBase> entry : autos.entrySet()) {
+        // String N = entry.getKey();
+        // AutoBase A = entry.getValue();
+        // autoChooser.addOption(N, A);
+      // }
+  
+      Logger.addDataReceiver(new NT4Publisher()); // Publish data to NetworkTables
+      Logger.start(); // Start logging! No more data receivers, replay sources, or metadata values may
+      drive.resetModulesToAbsolute();
+      mSubsystemManager = SubsystemManager.getInstance();
+  
+      mSubsystemManager.setSubsystems(
+          Drive.getInstance(),
+          Superstructure.getInstance() 
+          );
+          mSubsystemManager.registerEnabledLoops(mEnabledLooper);
+          mEnabledLooper.start();
+      }
+  
+    @Override
+    public void robotPeriodic() {
+      // auto = autoChooser.get();
+      
+      mEnabledLooper.outputToSmartDashboard();
+          mSubsystemManager.outputLoopTimes();
+      SubsystemManager.getInstance().outputTelemetry();
+     OdometryLimeLight.getInstance().readInputsAndAddVisionUpdate();
+    }
+  
+  
+boolean disableGyroReset = false;
+    @Override
+    public void autonomousInit() {
+      disableGyroReset = true;
+      swerve = SwerveDrive.getInstance();
+      swerve.zeroModules();
+      SuperStructure.getInstance().setState(SuperState.AUTO);
+      autoExecuter.setAuto(auto);
+      autoExecuter.start();
+    }
+  
+    /** This function is called periodically during autonomous. */
+    @Override
+    public void autonomousPeriodic() { 
+    }
+  
+    /** This function is called once when teleop is enabled. */  
+    @Override
+    public void teleopInit() {
+      
+      swerve = SwerveDrive.getInstance();
+      // swerve.fieldzeroSwerve();
+      swerve.zeroModules();
+  
+    }
+  
+    /** This function is called periodically during operator control. */
+    @Override
+    public void teleopPeriodic() {
+      controls.update();
+    }
+  
+    /** This function is called once when the robot is disabled. */
+  
+    @Override
+    public void disabledInit() {
+      mSubsystemManager.stop();
+      SuperStructure.getInstance().clearQueues();
+      autoExecuter.stop();
+      autoExecuter = new AutoExecuter();
+    }
+  
+    /** This function is called periodically when disabled. */
+    @Override
+    public void disabledPeriodic() {
+      RobotState.getInstance().outputTelemetry();
+      if(!disableGyroReset)
+        swerve.resetGryo(OdometryLimeLight.getInstance().getMovingAverageHeading());
+        Logger.recordOutput("reset angle", OdometryLimeLight.getInstance().getMovingAverageHeading());
+    }
+  
+    /** This function is called once when test mode is enabled. */
+    @Override
+    public void testInit() {
+    }
+  
+    /** This function is called periodically during test mode. */
+    @Override
+    public void testPeriodic() {
+      
+  
     }
   }
-
-  /** This function is called periodically during autonomous. */
-  @Override
-  public void autonomousPeriodic() {}
-
-  @Override
-  public void teleopInit() {
-    // This makes sure that the autonomous stops running when
-    // teleop starts running. If you want the autonomous to
-    // continue until interrupted by another command, remove
-    // this line or comment it out.
-    if (m_autonomousCommand != null) {
-      m_autonomousCommand.cancel();
-    }
-  }
-
-  /** This function is called periodically during operator control. */
-  @Override
-  public void teleopPeriodic() {}
-
-  @Override
-  public void testInit() {
-    // Cancels all running commands at the start of test mode.
-    CommandScheduler.getInstance().cancelAll();
-  }
-
-  /** This function is called periodically during test mode. */
-  @Override
-  public void testPeriodic() {}
-
-  /** This function is called once when the robot is first started up. */
-  @Override
-  public void simulationInit() {}
-
-  /** This function is called periodically whilst in simulation. */
-  @Override
-  public void simulationPeriodic() {}
-}
+ 

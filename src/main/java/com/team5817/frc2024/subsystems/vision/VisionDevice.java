@@ -11,6 +11,7 @@ import com.team254.lib.geometry.Pose2d;
 import com.team254.lib.geometry.Rotation2d;
 import com.team254.lib.util.MovingAverage;
 
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import java.util.Optional;
@@ -40,23 +41,11 @@ public class VisionDevice extends Subsystem {
 
 			@Override
 			public void onLoop(double timestamp) {
-
-
-				int hb = mOutputTable.getEntry("hb").getNumber(0).intValue();
-
 				mPeriodicIO.fps = mOutputTable.getEntry("fps").getInteger(0);
 				mPeriodicIO.latency = mOutputTable.getEntry("latency").getDouble(0.0);
 				mPeriodicIO.tagId = mOutputTable.getEntry("tid").getNumber(-1).intValue();
 				mPeriodicIO.seesTarget = mOutputTable.getEntry("tv").getBoolean(false);
-
-				if(hb == mPeriodicIO.hb) {
-					mPeriodicIO.is_connected = false;
-				}
-				else {
-					mPeriodicIO.is_connected = true;
-				}
-
-				mPeriodicIO.hb = hb;
+			
 
 				final double realTime = timestamp - mPeriodicIO.latency;
 
@@ -67,11 +56,14 @@ public class VisionDevice extends Subsystem {
 					addHeadingObservation(mPeriodicIO.mt1Pose.getRotation());
 
 					PoseEstimate poseEstimate = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(mName);
+					mPeriodicIO.targetToCamera = LimelightHelpers.getTargetPose3d_CameraSpace(mName);
 					mPeriodicIO.tagCounts = poseEstimate.tagCount;
 					mPeriodicIO.mt2Pose = new Pose2d(poseEstimate.pose);
-
-					VisionUpdate visionUpdate = new Vi
-					mPeriodicIO.visionUpdate
+					VisionUpdate visionUpdate = new VisionUpdate(realTime, mPeriodicIO.ta, mPeriodicIO.targetToCamera, mPeriodicIO.mt2Pose.getTranslation(), );//HOW DO YOU FIND STD DEV
+					mPeriodicIO.visionUpdate = Optional.of(visionUpdate);
+				}
+				else{
+					mPeriodicIO.visionUpdate = Optional.empty();
 				}
 			}
 
@@ -106,7 +98,9 @@ public class VisionDevice extends Subsystem {
 	public void writePeriodicOutputs() {
 		// No-op
 	}
-
+	public Optional<VisionUpdate> getVisionUpdate(){
+		return mPeriodicIO.visionUpdate;
+	}
 	public static class PeriodicIO {
 
 	// inputs
@@ -128,5 +122,6 @@ public class VisionDevice extends Subsystem {
 		public double tagCounts = 0;
 		public Pose2d mt2Pose = new Pose2d();
 		public Pose2d mt1Pose = new Pose2d();
+		public Pose3d targetToCamera = new Pose3d();
 	}
 }

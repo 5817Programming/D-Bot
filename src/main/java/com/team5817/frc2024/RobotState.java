@@ -14,6 +14,7 @@ import edu.wpi.first.math.StateSpaceUtil;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.estimator.ExtendedKalmanFilter;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -112,13 +113,11 @@ public class RobotState {
 	 * @param update Info about vision update.
 	 */
 	public synchronized void addVisionUpdate(VisionUpdate update) {
+		Translation2d field_to_vision = update.getFieldToVision();
 		// If it's the first update don't do filtering
 		if (!mLatestVisionUpdate.isPresent() || initial_field_to_odom.isEmpty()) {
 			double vision_timestamp = update.timestamp;
-			Pose2d proximate_dt_pose = odometry_to_vehicle.getInterpolated(new InterpolatingDouble(vision_timestamp));
-			Translation2d field_to_vision = update.field_to_camera.translateBy(update.getRobotToCamera()
-					.rotateBy(getLatestOdomToVehicle().getValue().getRotation())
-					.inverse());
+			Pose2d proximate_dt_pose = odometry_to_vehicle.getInterpolated(new InterpolatingDouble(vision_timestamp));	
 			Translation2d odom_to_vehicle_translation = proximate_dt_pose.getTranslation();
 			Translation2d field_to_odom = field_to_vision.translateBy(odom_to_vehicle_translation.inverse());
 			field_to_odometry.put(new InterpolatingDouble(vision_timestamp), field_to_odom);
@@ -130,16 +129,7 @@ public class RobotState {
 			double vision_timestamp = mLatestVisionUpdate.get().timestamp;
 			Pose2d proximate_dt_pose = odometry_to_vehicle.getInterpolated(new InterpolatingDouble(vision_timestamp));
 			mLatestVisionUpdate = Optional.ofNullable(update);
-			Translation2d field_to_vision = mLatestVisionUpdate
-					.get()
-					.field_to_camera
-					.translateBy(mLatestVisionUpdate
-							.get()
-							.getRobotToCamera()
-							.rotateBy(proximate_dt_pose.getRotation())
-							.inverse());
-
-			if (mPoseAcceptor.shouldAcceptVision(
+				if (mPoseAcceptor.shouldAcceptVision(
 					vision_timestamp,
 					new Pose2d(field_to_vision, new Rotation2d()),
 					getLatestFieldToVehicle(),
@@ -305,15 +295,16 @@ public class RobotState {
 	 */
 	public static class VisionUpdate {
 		private double timestamp;
-		private Translation2d field_to_camera;
-		private Translation2d robot_to_camera;
+		private Pose3d target_to_camera;
+		private double ta;
+		private Translation2d field_to_vision;
 		private double xy_stdev;
 
 		public VisionUpdate(
-				double timestamp, Translation2d field_to_camera, Translation2d robot_to_camera, double xy_stdev) {
+				double timestamp,double ta, Pose3d target_to_camera,Translation2d field_to_vision , double xy_stdev) {
+			this.ta = ta;			
 			this.timestamp = timestamp;
-			this.field_to_camera = field_to_camera;
-			this.robot_to_camera = robot_to_camera;
+			this.field_to_vision = field_to_vision;
 			this.xy_stdev = xy_stdev;
 		}
 
@@ -321,16 +312,20 @@ public class RobotState {
 			return timestamp;
 		}
 
-		public Translation2d getFieldToVehicle() {
-			return field_to_camera;
+		public Pose3d getTargetToCamera(){
+			return target_to_camera;
 		}
 
-		public Translation2d getRobotToCamera() {
-			return robot_to_camera;
+	public Translation2d getFieldToVision(){
+			return field_to_vision;
 		}
-
+		
 		public double getXYStdev() {
 			return xy_stdev;
+		}
+
+		public double getTa() {
+			return ta;
 		}
 	}
 }
