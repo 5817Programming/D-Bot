@@ -14,6 +14,8 @@ import com.team254.lib.util.MovingAverage;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.Timer;
+
 import java.util.Optional;
 
 import org.opencv.core.RotatedRect;
@@ -30,7 +32,6 @@ public class VisionDevice extends Subsystem {
 	
 		mOutputTable = NetworkTableInstance.getDefault().getTable(name);
 	}
-
 	@Override
 	public void registerEnabledLoops(ILooper enabledLooper) {
 		enabledLooper.register(new Loop() {
@@ -41,27 +42,6 @@ public class VisionDevice extends Subsystem {
 
 			@Override
 			public void onLoop(double timestamp) {
-				mPeriodicIO.fps = mOutputTable.getEntry("fps").getInteger(0);
-				mPeriodicIO.latency = mOutputTable.getEntry("latency").getDouble(0.0);
-				mPeriodicIO.tagId = mOutputTable.getEntry("tid").getNumber(-1).intValue();
-				mPeriodicIO.seesTarget = mOutputTable.getEntry("tv").getBoolean(false);
-			
-
-				final double realTime = timestamp - mPeriodicIO.latency;
-
-				if (mPeriodicIO.seesTarget && mPeriodicIO.is_connected) {
-					
-					mPeriodicIO.mt1Pose = new Pose2d(LimelightHelpers.getBotPose2d_wpiBlue(mName));
-
-					addHeadingObservation(mPeriodicIO.mt1Pose.getRotation());
-
-					PoseEstimate poseEstimate = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(mName);
-					mPeriodicIO.targetToCamera = LimelightHelpers.getTargetPose3d_CameraSpace(mName);
-					mPeriodicIO.tagCounts = poseEstimate.tagCount;
-					mPeriodicIO.mt2Pose = new Pose2d(poseEstimate.pose);
-					VisionUpdate visionUpdate = new VisionUpdate(timestamp,mPeriodicIO.ta, mPeriodicIO.targetToCamera, mPeriodicIO.mt2Pose.getTranslation(), realTime);
-					mPeriodicIO.visionUpdate = Optional.of(visionUpdate);
-				}
 			}
 
 			@Override
@@ -82,7 +62,28 @@ public class VisionDevice extends Subsystem {
 
 	@Override
 	public void readPeriodicInputs() {
+		double timestamp = Timer.getFPGATimestamp();
+		mPeriodicIO.fps = mOutputTable.getEntry("fps").getInteger(0);
+		mPeriodicIO.latency = mOutputTable.getEntry("latency").getDouble(0.0);
+		mPeriodicIO.tagId = mOutputTable.getEntry("tid").getNumber(-1).intValue();
+		mPeriodicIO.seesTarget = mOutputTable.getEntry("tv").getBoolean(false);
+	
 
+		final double realTime = timestamp - mPeriodicIO.latency;
+
+		if (mPeriodicIO.seesTarget && mPeriodicIO.is_connected) {
+			
+			mPeriodicIO.mt1Pose = new Pose2d(LimelightHelpers.getBotPose2d_wpiBlue(mName));
+
+			addHeadingObservation(mPeriodicIO.mt1Pose.getRotation());
+
+			PoseEstimate poseEstimate = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(mName);
+			mPeriodicIO.targetToCamera = LimelightHelpers.getTargetPose3d_CameraSpace(mName);
+			mPeriodicIO.tagCounts = poseEstimate.tagCount;
+			mPeriodicIO.mt2Pose = new Pose2d(poseEstimate.pose);
+			VisionUpdate visionUpdate = new VisionUpdate(timestamp,mPeriodicIO.ta, mPeriodicIO.targetToCamera, mPeriodicIO.mt2Pose.getTranslation(), realTime);
+			mPeriodicIO.visionUpdate = Optional.of(visionUpdate);
+		}
 
 
 	}

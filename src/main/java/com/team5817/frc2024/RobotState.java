@@ -1,5 +1,6 @@
 package com.team5817.frc2024;
 
+import com.team5817.frc2024.subsystems.Subsystem;
 import com.team5817.frc2024.subsystems.vision.VisionPoseAcceptor;
 import com.team254.lib.geometry.Pose2d;
 import com.team254.lib.geometry.Rotation2d;
@@ -21,7 +22,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import java.util.Map;
 import java.util.Optional;
 
-public class RobotState {
+public class RobotState extends Subsystem{
 	private static RobotState mInstance;
 
 	public static RobotState getInstance() {

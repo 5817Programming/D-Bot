@@ -12,19 +12,30 @@ import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
 
+import com.ctre.phoenix.motorcontrol.can.MotControllerJNI;
+import com.team254.lib.swerve.ChassisSpeeds;
+import com.team5817.frc2024.controlboard.ControlBoard;
+import com.team5817.frc2024.controlboard.DriverControls;
 import com.team5817.frc2024.loops.Looper;
 import com.team5817.frc2024.subsystems.Drive;
 import com.team5817.frc2024.subsystems.Superstructure;
+import com.team5817.frc2024.subsystems.vision.VisionDevice;
+import com.team5817.frc2024.subsystems.vision.VisionDeviceManager;
+import com.team5817.lib.Util;
 
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 
 public class Robot extends LoggedRobot {
 
     SubsystemManager mSubsystemManager;
     Superstructure s = Superstructure.getInstance();
     Drive drive = Drive.getInstance();
+    VisionDeviceManager mVision = VisionDeviceManager.getInstance();
+    DriverControls controls = new DriverControls();
+    ControlBoard controlBoard = ControlBoard.getInstance();
     // public LoggedDashboardChooser<AutoBase> autoChooser = new LoggedDashboardChooser<>("AutoChooser");
     private final Looper mEnabledLooper = new Looper();
   
@@ -51,7 +62,8 @@ public class Robot extends LoggedRobot {
   
       mSubsystemManager.setSubsystems(
           Drive.getInstance(),
-          Superstructure.getInstance() 
+          Superstructure.getInstance(),
+          VisionDeviceManager.getInstance()
           );
           mSubsystemManager.registerEnabledLoops(mEnabledLooper);
           mEnabledLooper.start();
@@ -64,7 +76,8 @@ public class Robot extends LoggedRobot {
       mEnabledLooper.outputToSmartDashboard();
           mSubsystemManager.outputLoopTimes();
       SubsystemManager.getInstance().outputTelemetry();
-     OdometryLimeLight.getInstance().readInputsAndAddVisionUpdate();
+      
+      
     }
   
   
@@ -72,11 +85,11 @@ boolean disableGyroReset = false;
     @Override
     public void autonomousInit() {
       disableGyroReset = true;
-      swerve = SwerveDrive.getInstance();
-      swerve.zeroModules();
-      SuperStructure.getInstance().setState(SuperState.AUTO);
-      autoExecuter.setAuto(auto);
-      autoExecuter.start();
+      drive = Drive.getInstance();
+      drive.resetModulesToAbsolute();
+      // Superstructure.getInstance().setState(Superstructure.AUTO);
+      // autoExecuter.setAuto(auto);
+      // autoExecuter.start();
     }
   
     /** This function is called periodically during autonomous. */
@@ -88,16 +101,22 @@ boolean disableGyroReset = false;
     @Override
     public void teleopInit() {
       
-      swerve = SwerveDrive.getInstance();
       // swerve.fieldzeroSwerve();
-      swerve.zeroModules();
-  
+      drive.resetModulesToAbsolute();
+      drive.feedTeleopSetpoint(new ChassisSpeeds(0,0,0));
     }
   
     /** This function is called periodically during operator control. */
     @Override
     public void teleopPeriodic() {
-      controls.update();
+      controls.twoControllerMode();
+      controlBoard.update();
+      drive.feedTeleopSetpoint(ChassisSpeeds.fromFieldRelativeSpeeds(
+        controlBoard.getSwerveTranslation().x(),
+        controlBoard.getSwerveTranslation().y(),
+        controlBoard.getSwerveRotation(),
+        Util.robotToFieldRelative(drive.getHeading(), DriverStation.getAlliance().get().equals(Alliance.Red))
+      ));
     }
   
     /** This function is called once when the robot is disabled. */
@@ -105,9 +124,9 @@ boolean disableGyroReset = false;
     @Override
     public void disabledInit() {
       mSubsystemManager.stop();
-      SuperStructure.getInstance().clearQueues();
-      autoExecuter.stop();
-      autoExecuter = new AutoExecuter();
+      // Superstructure.getInstance().clearQueues();
+      // autoExecuter.stop();
+      // autoExecuter = new AutoExecuter();
     }
   
     /** This function is called periodically when disabled. */
@@ -115,8 +134,7 @@ boolean disableGyroReset = false;
     public void disabledPeriodic() {
       RobotState.getInstance().outputTelemetry();
       if(!disableGyroReset)
-        swerve.resetGryo(OdometryLimeLight.getInstance().getMovingAverageHeading());
-        Logger.recordOutput("reset angle", OdometryLimeLight.getInstance().getMovingAverageHeading());
+      drive.zeroGyro(mVision.getMovingAverageRead());
     }
   
     /** This function is called once when test mode is enabled. */
@@ -127,8 +145,6 @@ boolean disableGyroReset = false;
     /** This function is called periodically during test mode. */
     @Override
     public void testPeriodic() {
-      
-  
     }
   }
  

@@ -40,6 +40,12 @@ public class Constants {
 	public static final int kLongCANTimeoutMs = 100;
 	public static final int kCANTimeoutMs = 10;
 
+    public static final double[][] fundamentalMatrix = 
+	{
+	{0.0,0.0,0.0},
+	{0.0,0.0,0.0},
+	{0.0,0.0,0.0}};
+
 	public static final class SwerveConstants {
 
 

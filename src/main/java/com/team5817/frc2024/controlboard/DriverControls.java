@@ -15,7 +15,7 @@ public class DriverControls {
 	/* ONE CONTROLLER */
 
 	public void oneControllerMode() {
-			mDrive.overrideHeading(false);
+			mDrive.overrideHeading(true);
 	}
 
 	/* TWO CONTROLLERS */
