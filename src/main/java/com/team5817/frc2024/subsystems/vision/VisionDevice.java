@@ -42,6 +42,30 @@ public class VisionDevice extends Subsystem {
 
 			@Override
 			public void onLoop(double timestamp) {
+				mPeriodicIO.fps = mOutputTable.getEntry("fps").getInteger(0);
+				mPeriodicIO.latency = mOutputTable.getEntry("latency").getDouble(0.0);
+				mPeriodicIO.tagId = mOutputTable.getEntry("tid").getNumber(-1).intValue();
+				mPeriodicIO.seesTarget = mOutputTable.getEntry("tv").getBoolean(false);
+			
+
+				final double realTime = timestamp - mPeriodicIO.latency;
+
+				if (mPeriodicIO.seesTarget && mPeriodicIO.is_connected) {
+					
+					mPeriodicIO.mt1Pose = new Pose2d(LimelightHelpers.getBotPose2d_wpiBlue(mName));
+
+					addHeadingObservation(mPeriodicIO.mt1Pose.getRotation());
+
+					PoseEstimate poseEstimate = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(mName);
+					mPeriodicIO.targetToCamera = LimelightHelpers.getTargetPose3d_CameraSpace(mName);
+					mPeriodicIO.tagCounts = poseEstimate.tagCount;
+					mPeriodicIO.mt2Pose = new Pose2d(poseEstimate.pose);
+					VisionUpdate visionUpdate = new VisionUpdate(realTime, mPeriodicIO.ta, mPeriodicIO.targetToCamera, mPeriodicIO.mt2Pose.getTranslation(), );//HOW DO YOU FIND STD DEV
+					mPeriodicIO.visionUpdate = Optional.of(visionUpdate);
+				}
+				else{
+					mPeriodicIO.visionUpdate = Optional.empty();
+				}
 			}
 
 			@Override

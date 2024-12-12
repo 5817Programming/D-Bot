@@ -905,7 +905,6 @@ public class LimelightHelpers {
     }
 
 
-
     public static void setCropWindow(String limelightName, double cropXMin, double cropXMax, double cropYMin, double cropYMax) {
         double[] entries = new double[4];
         entries[0] = cropXMin;
