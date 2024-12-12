@@ -56,9 +56,9 @@ public class VisionDeviceManager extends Subsystem {
 			@Override
 			public void onLoop(double timestamp) {
 			if(mDomCamera.getVisionUpdate().isPresent()&&mSubCamera.getVisionUpdate().isPresent()){
-				for(VisionDevice device:checkEpipolar(mSubCamera, mDomCamera)){
-					RobotState.getInstance().addVisionUpdate(device.getVisionUpdate().get());
-				}//TODO add traditional filtering 	
+				if(translationalFilter(mDomCamera.getVisionUpdate().get().getTargetToCamera(), mSubCamera.getVisionUpdate().get().getTargetToCamera())||epipolarVerification(null, null)){
+
+				}
 			}else{
 				for(VisionDevice device: mAllCameras){
 					if(device.getVisionUpdate().isPresent())
