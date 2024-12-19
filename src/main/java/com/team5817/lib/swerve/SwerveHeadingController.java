@@ -1,98 +1,107 @@
+// Copyright (c) FIRST and other WPILib contributors.
+// Open Source Software; you can modify and/or share it under the terms of
+// the WPILib BSD license file in the root directory of this project.
+
 package com.team5817.lib.swerve;
 
-import com.team5817.frc2024.Constants.SwerveConstants;
+import com.team254.lib.geometry.Rotation2d;
 import com.team254.lib.util.SynchronousPIDF;
-import edu.wpi.first.wpilibj.Timer;
 
+/** Add your docs here. */
 public class SwerveHeadingController {
-	private static SwerveHeadingController mInstance;
+    private Rotation2d targetHeading = Rotation2d.fromDegrees(0);
+    private double lastTimestamp;
 
-	public static SwerveHeadingController getInstance() {
-		if (mInstance == null) {
-			mInstance = new SwerveHeadingController();
-		}
+    private double disabledStartTimestamp = 0;
+    private boolean atTarget = false;
+    private boolean isDisabled = false;
+    public void disableHeadingController(boolean disable) {
+        disabledStartTimestamp = lastTimestamp;
+        isDisabled = disable;
+    }
 
-		return mInstance;
+    private SynchronousPIDF openLoopStabilizeController;
+    private SynchronousPIDF velocityStabilizeController;
+	private SynchronousPIDF openLoopSnapController;
+    private SynchronousPIDF velocitySnapController;
+	
+	enum State{
+		Snap,
+		Stabilize
 	}
+	State currentState = State.Stabilize;
+	
+    public SwerveHeadingController() {
+        openLoopStabilizeController = new SynchronousPIDF(0.00025, 0.0, 0, 1.0);
+        velocityStabilizeController = new SynchronousPIDF(0.001, 0.0, 0, 100);
 
-	public double targetHeadingRadians;
-	private double lastUpdatedTimestamp;
+		openLoopSnapController = new SynchronousPIDF(0.00025, 0.0, 0, 1.0);//TODO FIND
+        velocitySnapController = new SynchronousPIDF(0.001, 0.0, 0, 100);
+		
+    }
+    public void setTargetStabilizeHeading(Rotation2d heading) {
+        targetHeading = Rotation2d.fromDegrees(heading.getDegrees());
+        atTarget = false;
+		currentState = State.Stabilize;
+    }
+	public void setTargetSnapHeading(Rotation2d heading) {
+        targetHeading = Rotation2d.fromDegrees(heading.getDegrees());
+        atTarget = false;
+		currentState = State.Snap;
+    }
+    public double update(Rotation2d heading, double timestamp) {
+        if(isDisabled) {
+            if((timestamp - disabledStartTimestamp) > 0.25) {
+                isDisabled = false;
+				if(currentState == State.Stabilize)
+                setTargetStabilizeHeading(heading);
+				else
+				setTargetSnapHeading(heading);
+            }
+            return 0;
+        }
+        return getRotationCorrection(heading, timestamp);
+    }
 
-	public enum State {
-		OFF,
-		SNAP,
-		STABILIZE
-	}
 
-	private State current_state = State.OFF;
+    public boolean atTarget(){
+        return atTarget;
+    }
+    public double getRotationCorrection(Rotation2d heading, double timestamp) {
+        double error = new Rotation2d(targetHeading).rotateBy(heading.inverse()).getDegrees();
+        double dt = timestamp - lastTimestamp;
+        lastTimestamp = timestamp;
+        if(Math.abs(error)< 2.5){
+            atTarget = true;
+        }
+		double correctionForce;
+		if(currentState == State.Stabilize)
+        correctionForce = openLoopStabilizeController.calculate(error, dt);
+		else
+		correctionForce = openLoopSnapController.calculate(error, dt);
 
-	public State getState() {
-		return current_state;
-	}
+        if(Math.abs(correctionForce) > 0.017){
+            correctionForce = .0075* Math.signum(correctionForce);
+        }
+        return correctionForce;
+    }
 
-	public void setState(State state) {
-		current_state = state;
-	}
+    public double getVelocityCorrection(double error, double timestamp) {
+        double dt = timestamp - lastTimestamp;
+        lastTimestamp = timestamp;
+        if(Math.abs(error)< 3){
+            atTarget = true;
+        }
+		double correctionForce;
+		if(currentState == State.Stabilize)
+        correctionForce = velocityStabilizeController.calculate(error, dt);
+		else
+		correctionForce = velocitySnapController.calculate(error, dt);
+       return correctionForce;
+    }
 
-	public void disable() {
-		setState(State.OFF);
-	}
+    public double getTargetHeading(){
+        return targetHeading.getDegrees();
+    }
 
-	private SynchronousPIDF stabilizePID;
-	private SynchronousPIDF snapPID;
-
-	public void setSnapTarget(double angle_rad) {
-		targetHeadingRadians = angle_rad;
-		setState(State.SNAP);
-	}
-
-	public void setStabilizeTarget(double angle_rad) {
-		targetHeadingRadians = angle_rad;
-		setState(State.STABILIZE);
-	}
-
-	public double getTargetHeadingRadians() {
-		return targetHeadingRadians;
-	}
-
-	public SwerveHeadingController() {
-		stabilizePID = new SynchronousPIDF(
-				SwerveConstants.kStabilizeSwerveHeadingKp,
-				SwerveConstants.kStabilizeSwerveHeadingKi,
-				SwerveConstants.kStabilizeSwerveHeadingKd,
-				SwerveConstants.kStabilizeSwerveHeadingKf);
-
-		snapPID = new SynchronousPIDF(
-				SwerveConstants.kSnapSwerveHeadingKp,
-				SwerveConstants.kSnapSwerveHeadingKi,
-				SwerveConstants.kSnapSwerveHeadingKd,
-				SwerveConstants.kSnapSwerveHeadingKf);
-
-		stabilizePID.setInputRange(-Math.PI, Math.PI);
-		stabilizePID.setContinuous();
-
-		stabilizePID.setOutputRange(-10 * Math.PI, 10 * Math.PI);
-
-		targetHeadingRadians = 0.0;
-		lastUpdatedTimestamp = Timer.getFPGATimestamp();
-	}
-
-	public double update(double headingRadians, double timestamp) {
-		double correction = 0;
-		double error = headingRadians - targetHeadingRadians;
-		double dt = timestamp - lastUpdatedTimestamp;
-		switch (current_state) {
-			case OFF:
-				break;
-			case STABILIZE:
-				correction = stabilizePID.calculate(error, dt);
-				break;
-			case SNAP:
-				correction = snapPID.calculate(error, dt);
-				break;
-		}
-
-		lastUpdatedTimestamp = timestamp;
-		return correction;
-	}
 }

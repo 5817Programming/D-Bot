@@ -1,5 +1,6 @@
 package com.team5817.frc2024.subsystems.vision;
 
+import com.team5817.frc2024.FieldLayout;
 import com.team5817.frc2024.RobotState.VisionUpdate;
 import com.team5817.frc2024.loops.ILooper;
 import com.team5817.frc2024.loops.Loop;
@@ -10,12 +11,15 @@ import com.team5817.frc2024.subsystems.limelight.LimelightHelpers.PoseEstimate;
 import com.team254.lib.geometry.Pose2d;
 import com.team254.lib.geometry.Rotation2d;
 import com.team254.lib.util.MovingAverage;
+import com.team254.lib.util.Util;
 
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Timer;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.opencv.core.RotatedRect;
@@ -55,12 +59,24 @@ public class VisionDevice extends Subsystem {
 					mPeriodicIO.mt1Pose = new Pose2d(LimelightHelpers.getBotPose2d_wpiBlue(mName));
 
 					addHeadingObservation(mPeriodicIO.mt1Pose.getRotation());
-
 					PoseEstimate poseEstimate = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(mName);
 					mPeriodicIO.targetToCamera = LimelightHelpers.getTargetPose3d_CameraSpace(mName);
 					mPeriodicIO.tagCounts = poseEstimate.tagCount;
 					mPeriodicIO.mt2Pose = new Pose2d(poseEstimate.pose);
-					VisionUpdate visionUpdate = new VisionUpdate(realTime, mPeriodicIO.ta, mPeriodicIO.targetToCamera, mPeriodicIO.mt2Pose.getTranslation(), );//HOW DO YOU FIND STD DEV
+
+					double std_dev_multiplier = 1.0;
+
+			Pose3d pose3d = FieldLayout.kTagMap.getTagPose(mPeriodicIO.tagId).get();
+			double dist = new Pose2d(pose3d.toPose2d()).distance(mPeriodicIO.mt2Pose);//make it cam pose
+
+
+			// Estimate standard deviation of vision measurement
+			double xyStdDev = std_dev_multiplier
+					* (0.1)
+					* ((0.01 * Math.pow(dist, 2.0)) + (0.005 * Math.pow(dist, 2.0)))
+					;
+			xyStdDev = Math.max(0.02, xyStdDev);
+					VisionUpdate visionUpdate = new VisionUpdate(realTime, mPeriodicIO.ta, mPeriodicIO.targetToCamera, mPeriodicIO.mt2Pose.getTranslation(), xyStdDev);//HOW DO YOU FIND STD DEV
 					mPeriodicIO.visionUpdate = Optional.of(visionUpdate);
 				}
 				else{

@@ -11,7 +11,6 @@ import com.team5817.frc2024.loops.ILooper;
 import com.team5817.frc2024.loops.Loop;
 import com.team5817.lib.Util;
 import com.team5817.lib.drivers.Pigeon;
-import com.team5817.lib.logger.LogUtil;
 import com.team5817.lib.swerve.DriveMotionPlanner;
 import com.team5817.lib.swerve.DriveMotionPlanner.FollowerType;
 import com.team5817.lib.swerve.SwerveHeadingController;
@@ -27,13 +26,8 @@ import com.team254.lib.swerve.SwerveKinematicLimits;
 import com.team254.lib.swerve.SwerveModuleState;
 import com.team254.lib.swerve.SwerveSetpoint;
 import com.team254.lib.swerve.SwerveSetpointGenerator;
-import com.team254.lib.trajectory.TimedView;
-import com.team254.lib.trajectory.Trajectory;
-import com.team254.lib.trajectory.TrajectoryIterator;
 import com.team254.lib.trajectory.timing.TimedState;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -122,7 +116,7 @@ public class Drive extends Subsystem {
 			} else {
 				double x = speeds.vxMetersPerSecond;
 				double y = speeds.vyMetersPerSecond;
-				double omega = mHeadingController.update(mPeriodicIO.heading.getRadians(), Timer.getFPGATimestamp());
+				double omega = mHeadingController.update(mPeriodicIO.heading, Timer.getFPGATimestamp());
 				mPeriodicIO.des_chassis_speeds = new ChassisSpeeds(x, y, omega);
 				return;
 			}
@@ -155,7 +149,7 @@ public class Drive extends Subsystem {
 		if (mControlState != DriveControlState.HEADING_CONTROL && mControlState != DriveControlState.PATH_FOLLOWING) {
 			mControlState = DriveControlState.HEADING_CONTROL;
 		}
-		mHeadingController.setSnapTarget(angle.getRadians());
+		mHeadingController.setTargetSnapHeading(angle);
 	}
 
 	/**
@@ -167,9 +161,8 @@ public class Drive extends Subsystem {
 		if (mControlState != DriveControlState.HEADING_CONTROL && mControlState != DriveControlState.PATH_FOLLOWING) {
 			mControlState = DriveControlState.HEADING_CONTROL;
 		}
-		if (mHeadingController.getTargetHeadingRadians() != angle.getRadians()) {
-			mHeadingController.setStabilizeTarget(angle.getRadians());
-		}
+		mHeadingController.setTargetStabilizeHeading(angle);
+		
 	}
 
 	/**
@@ -229,7 +222,7 @@ public class Drive extends Subsystem {
 				synchronized (Drive.this) {
 					switch (mControlState) {
 						case PATH_FOLLOWING:
-							updatePathFollower();
+							// updatePathFollower();
 							break;
 						case HEADING_CONTROL:
 							break;
@@ -283,15 +276,6 @@ public class Drive extends Subsystem {
 				twist_vel.dtheta);
 	}
 
-	public synchronized void setTrajectory(TrajectoryIterator<TimedState<Pose2dWithMotion>> trajectory) {
-		if (mMotionPlanner != null) {
-			mOverrideTrajectory = false;
-			mMotionPlanner.reset();
-			mMotionPlanner.setTrajectory(trajectory);
-			mControlState = DriveControlState.PATH_FOLLOWING;
-		}
-	}
-
 	/**
 	 * @param pid_enable Switches between using PID control or Pure Pursuit control to follow trajectories.
 	 */
@@ -303,73 +287,6 @@ public class Drive extends Subsystem {
 		}
 	}
 
-	/**
-	 * Generate and follow a trajectory from the robot-relative points provided.
-	 * 
-	 * @param relativeEndPos End position at relative to the current robot pose.
-	 * @param targetHeading End heading relative to the field.
-	 */
-	public void setRobotCentricTrajectory(Translation2d relativeEndPos, Rotation2d targetHeading) {
-		Translation2d end_position = getPose().getTranslation().translateBy(relativeEndPos);
-		Rotation2d velocity_dir =
-				(mWheelTracker.getMeasuredVelocity()).getTranslation().direction();
-		List<Pose2d> waypoints = new ArrayList<>();
-		List<Rotation2d> headings = new ArrayList<>();
-		// Current state
-		waypoints.add(new Pose2d(getPose().getTranslation(), velocity_dir));
-		headings.add(getHeading());
-		// Target state
-		waypoints.add(new Pose2d(end_position, relativeEndPos.direction()));
-		headings.add(targetHeading);
-		Trajectory<TimedState<Pose2dWithMotion>> traj = mMotionPlanner.generateTrajectory(
-				false, waypoints, headings, List.of(), Constants.SwerveConstants.maxAutoSpeed * 0.5, 2.54, 9.0);
-		setTrajectory(new TrajectoryIterator<>(new TimedView<>(traj)));
-	}
-
-	/**
-	 * Generate and follow a trajectory from the field-relative points provided.
-	 * 
-	 * @param fieldRelativeEndPos End position at relative to the field.
-	 * @param targetHeading End heading relative to the field.
-	 */
-	public void setFieldCentricTrajectory(Translation2d fieldRelativeEndPos, Rotation2d targetHeading) {
-		Translation2d robot_relative_end_pos =
-				fieldRelativeEndPos.translateBy(getPose().getTranslation().inverse());
-
-		Rotation2d velocity_dir = robot_relative_end_pos.direction();
-		Translation2d velocity = mWheelTracker.getMeasuredVelocity();
-		if (velocity.norm() > 0.2) {
-			velocity_dir = velocity.direction();
-		}
-
-		List<Pose2d> waypoints = new ArrayList<>();
-		List<Rotation2d> headings = new ArrayList<>();
-		// Current state
-		waypoints.add(new Pose2d(getPose().getTranslation(), velocity_dir));
-		headings.add(getHeading());
-		// Target state
-		waypoints.add(new Pose2d(fieldRelativeEndPos, robot_relative_end_pos.direction()));
-		headings.add(targetHeading);
-		Trajectory<TimedState<Pose2dWithMotion>> traj = mMotionPlanner.generateTrajectory(
-				false,
-				waypoints,
-				headings,
-				List.of(),
-				velocity.norm(),
-				0.0,
-				Constants.SwerveConstants.maxAutoSpeed * 0.5,
-				2.54,
-				9.0);
-		LogUtil.recordTrajectory("OTF Traj", traj);
-		setTrajectory(new TrajectoryIterator<>(new TimedView<>(traj)));
-	}
-
-	public synchronized boolean isDoneWithTrajectory() {
-		if (mMotionPlanner == null || mControlState != DriveControlState.PATH_FOLLOWING) {
-			return false;
-		}
-		return mMotionPlanner.isDone() || mOverrideTrajectory;
-	}
 
 	/**
 	 * Exits trajectory following early.
@@ -379,25 +296,6 @@ public class Drive extends Subsystem {
 		mOverrideTrajectory = value;
 	}
 
-	/**
-	 * If in the Path Following state, updates the
-	 * DriveMotionPlanner and PeriodicIO path setpoint/error.
-	 */
-	private void updatePathFollower() {
-		if (mControlState == DriveControlState.PATH_FOLLOWING) {
-			final double now = Timer.getFPGATimestamp();
-			ChassisSpeeds output = mMotionPlanner.update(now, getPose(), mWheelTracker.getMeasuredVelocity());
-			if (output != null) {
-				mPeriodicIO.des_chassis_speeds = output;
-			}
-
-			mPeriodicIO.translational_error = mMotionPlanner.getTranslationalError();
-			mPeriodicIO.heading_error = mMotionPlanner.getHeadingError();
-			mPeriodicIO.path_setpoint = mMotionPlanner.getSetpoint();
-		} else {
-			DriverStation.reportError("Drive is not in path following state", false);
-		}
-	}
 
 	/**
 	 * Updates the wanted setpoint, including whether heading should
@@ -417,7 +315,7 @@ public class Drive extends Subsystem {
 		ChassisSpeeds wanted_speeds;
 		if (mOverrideHeading) {
 			stabilizeHeading(mTrackingAngle);
-			double new_omega = mHeadingController.update(mPeriodicIO.heading.getRadians(), Timer.getFPGATimestamp());
+			double new_omega = mHeadingController.update(mPeriodicIO.heading, Timer.getFPGATimestamp());
 			ChassisSpeeds speeds = new ChassisSpeeds(twist_vel.dx, twist_vel.dy, new_omega);
 			wanted_speeds = speeds;
 		} else {

@@ -1,7 +1,17 @@
 package com.team5817.lib.swerve;
 
 
-import com.uni.lib.motion.PPPathPointState;
+
+import com.team254.lib.control.Lookahead;
+import com.team254.lib.geometry.Pose2d;
+import com.team254.lib.geometry.Rotation2d;
+import com.team254.lib.geometry.Translation2d;
+import com.team254.lib.geometry.Twist2d;
+import com.team254.lib.swerve.ChassisSpeeds;
+import com.team254.lib.trajectory.TrajectoryIterator;
+import com.team254.lib.util.Util;
+import com.team5817.frc2024.Constants;
+import com.team5817.lib.motion.PPPathPointState;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
@@ -41,8 +51,7 @@ public class DriveMotionPlanner {
 	public PPPathPointState mSetpoint = new PPPathPointState();
 	Pose2d mError = Pose2d.identity();
 
-	ErrorTracker mErrorTracker = new ErrorTracker(14 * 100);
-	HeadingController mHeadingController = new HeadingController();
+	SwerveHeadingController mHeadingController = new SwerveHeadingController();
 	Translation2d mTranslationalError = Translation2d.identity();
 	Rotation2d mPrevHeadingError = Rotation2d.identity();
 	Pose2d mCurrentState = Pose2d.identity();
@@ -74,7 +83,6 @@ public class DriveMotionPlanner {
 	}
 
 	public void reset() {
-		mErrorTracker.reset();
 		mTranslationalError = Translation2d.identity();
 		mPrevHeadingError = Rotation2d.identity();
 		mLastSetpoint = null;
@@ -88,8 +96,8 @@ public class DriveMotionPlanner {
 			DriverStation.getAlliance().get() == Alliance.Blue? 3:-3; 
 			// 2.4;/* * Math.ypot(chassisSpeeds.vxMetersPerSecond, chassisSpeeds.vyMetersPerSecond)*/;//0.15;
 		Twist2d pid_error = Pose2d.log(mError);
-		chassisSpeeds.vxMetersPerSecond = (chassisSpeeds.vxMetersPerSecond * 1) - kPathk * pid_error.dx;
-		chassisSpeeds.vyMetersPerSecond = (chassisSpeeds.vyMetersPerSecond * .8) + kPathk * pid_error.dy;
+		chassisSpeeds.vxMetersPerSecond = (chassisSpeeds.vxMetersPerSecond) - kPathk * pid_error.dx;
+		chassisSpeeds.vyMetersPerSecond = (chassisSpeeds.vyMetersPerSecond) + kPathk * pid_error.dy;
 		// chassisSpeeds.vxMetersPerSecond = (chassisSpeeds.vxMetersPerSecond * 1) ;
 		// chassisSpeeds.vyMetersPerSecond = (chassisSpeeds.vyMetersPerSecond * 1) ;
 	
@@ -196,7 +204,7 @@ public class DriveMotionPlanner {
 			// Compute error in robot frame
 			mPrevHeadingError = mError.getRotation();
 			mError = current_state.inverse().transformBy(mSetpoint.getPose());
-			mErrorTracker.addObservation(mError);
+		
 
 
             switch (mFollowerType) {
@@ -274,7 +282,5 @@ public class DriveMotionPlanner {
 		return mSetpoint;
 	}
 
-	public synchronized ErrorTracker getErrorTracker() {
-		return mErrorTracker;
-	}
+
 }

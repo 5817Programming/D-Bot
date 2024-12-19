@@ -46,6 +46,8 @@ public class Constants {
 	{0.0,0.0,0.0},
 	{0.0,0.0,0.0}};
 
+    public static final double SwerveMaxspeedMPS = 6;//TODO FIND
+
 	public static final class SwerveConstants {
 
 
